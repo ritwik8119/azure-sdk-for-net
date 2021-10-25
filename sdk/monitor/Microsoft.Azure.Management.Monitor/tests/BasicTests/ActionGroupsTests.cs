@@ -18,6 +18,75 @@ namespace Monitor.Tests.BasicTests
     {
         [Fact]
         [Trait("Category", "Mock")]
+        public void SendTestNotificationsTest()
+        {
+            TestNotificationResponse expectedResult = new TestNotificationResponse
+            {
+                CorrelationId = "df4c4b8b-ca90-4e6c-b453-c052fcf63650",
+                CreatedTime = DateTime.UtcNow.ToString(),
+                NotificationId = "11000334597939"
+            };
+
+            var handler = new RecordedDelegatingHandler();
+            var insightsClient = GetMonitorManagementClient(handler);
+            var serializedObject = Microsoft.Rest.Serialization.SafeJsonConvert.SerializeObject(expectedResult, insightsClient.SerializationSettings);
+
+            var expectedResponse = new HttpResponseMessage(HttpStatusCode.Accepted)
+            {
+                Content = new StringContent(serializedObject)
+            };
+
+            handler = new RecordedDelegatingHandler(expectedResponse);
+            insightsClient = GetMonitorManagementClient(handler);
+
+            NotificationRequestBody requestBody = GetNotificationRequestBody();
+
+            var result = insightsClient.ActionGroups.PostTestNotificationsAsync(requestBody).Result;
+
+            Assert.NotNull(result);
+            Assert.Equal(result.CorrelationId, expectedResult.CorrelationId);
+            Assert.Equal(result.CreatedTime, expectedResult.CreatedTime);
+            Assert.Equal(result.NotificationId, expectedResult.NotificationId);
+        }
+
+        [Fact]
+        [Trait("Category", "Mock")]
+        public void GetTestNotificationStatusTest()
+        {
+            TestNotificationDetailsResponse expectedActionGroup = GetTestNotificationStatusResponseBody();
+
+            var handler = new RecordedDelegatingHandler();
+            var insightsClient = GetMonitorManagementClient(handler);
+            var serializedObject = Microsoft.Rest.Serialization.SafeJsonConvert.SerializeObject(expectedActionGroup, insightsClient.SerializationSettings);
+            var expectedResponse = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(serializedObject)
+            };
+
+            handler = new RecordedDelegatingHandler(expectedResponse);
+            insightsClient = GetMonitorManagementClient(handler);
+
+            TestNotificationDetailsResponse statusResponse = insightsClient.ActionGroups.GetTestNotificationsAsync("11000340935777").Result;
+
+            Assert.Equal(statusResponse.Context.ContextType, expectedActionGroup.Context.ContextType);
+            Assert.Equal(statusResponse.Context.NotificationSource, expectedActionGroup.Context.NotificationSource);
+            Assert.Equal(statusResponse.CreatedTime, expectedActionGroup.CreatedTime);
+            Assert.Equal(statusResponse.CompletedTime, expectedActionGroup.CompletedTime);
+            Assert.Equal(statusResponse.State, expectedActionGroup.State);
+
+            for (int i = 0; i < statusResponse.ActionDetails.Count; i++)
+            {
+                Assert.Equal(statusResponse.ActionDetails[i].MechanismType, expectedActionGroup.ActionDetails[i].MechanismType);
+                Assert.Equal(statusResponse.ActionDetails[i].Name, expectedActionGroup.ActionDetails[i].Name);
+                Assert.Equal(statusResponse.ActionDetails[i].SendTime, expectedActionGroup.ActionDetails[i].SendTime);
+                Assert.Equal(statusResponse.ActionDetails[i].Status, expectedActionGroup.ActionDetails[i].Status);
+                Assert.Equal(statusResponse.ActionDetails[i].SubState, expectedActionGroup.ActionDetails[i].SubState);
+                Assert.Equal(statusResponse.ActionDetails[i].Detail, expectedActionGroup.ActionDetails[i].Detail);
+            }
+        }
+
+        [Fact]
+        [Trait("Category", "Mock")]
         public void CreateOrUpdateActionGroupTest()
         {
             ActionGroupResource expectedParameters = GetCreateOrUpdateActionGroupParameter();
@@ -172,7 +241,7 @@ namespace Monitor.Tests.BasicTests
             monitorManagementClient = GetMonitorManagementClient(handler);
 
             AzureOperationResponse response = monitorManagementClient.ActionGroups.EnableReceiverWithHttpMessagesAsync(
-                resourceGroupName: "rg1", 
+                resourceGroupName: "rg1",
                 actionGroupName: "name1",
                 receiverName: "receiverName1").Result;
 
@@ -345,6 +414,80 @@ namespace Monitor.Tests.BasicTests
                 Assert.Equal(exp.RunbookName, act.RunbookName);
                 Assert.Equal(exp.ServiceUri, act.ServiceUri);
             }
+        }
+
+        private static NotificationRequestBody GetNotificationRequestBody()
+        {
+            return new NotificationRequestBody
+            {
+                AlertType = "budget",
+                SmsReceivers = new List<SmsReceiver>
+                {
+                    new SmsReceiver {
+                        CountryCode = "84",
+                        Name = "Just a name",
+                        PhoneNumber = "5555555555"
+                    }
+                },
+                EmailReceivers = new List<EmailReceiver>
+                {
+                    new EmailReceiver {
+                        EmailAddress = "example@test.me",
+                        UseCommonAlertSchema = false,
+                        Name = "email name"
+                    }
+                },
+                VoiceReceivers = new List<VoiceReceiver>
+                {
+                    new VoiceReceiver {
+                        CountryCode = "1",
+                        Name = "Voice name 1",
+                        PhoneNumber = "4444444444"
+                    }
+                }
+            };
+        }
+
+        private static TestNotificationDetailsResponse GetTestNotificationStatusResponseBody()
+        {
+            return new TestNotificationDetailsResponse
+            {
+                Context = new Context
+                {
+                    ContextType = "Microsoft.Insights/Budget",
+                    NotificationSource = "Microsoft.Insights/TestNotification"
+                },
+                CreatedTime = DateTime.UtcNow.ToString(),
+                CompletedTime = DateTime.UtcNow.ToString(),
+                State = "Completed",
+                ActionDetails = new List<ActionDetail>
+                {
+                    new ActionDetail {
+                        MechanismType = "Email",
+                        Name = "Email #1",
+                        Status = "Completed",
+                        SubState = "Default",
+                        SendTime = "2021-10-25T02:06:19.5340048+00:00",
+                        Detail = null
+                    },
+                    new ActionDetail {
+                        MechanismType = "Sms",
+                        Name = "Sms #1",
+                        Status = "Completed",
+                        SubState = "Default",
+                        SendTime = "2021-10-25T02:06:19.5340048+00:00",
+                        Detail = null
+                    },
+                    new ActionDetail {
+                        MechanismType = "Voice",
+                        Name = "Sms #1",
+                        Status = "Completed",
+                        SubState = "Default",
+                        SendTime = "2021-10-25T02:06:19.5340048+00:00",
+                        Detail = null
+                    }
+                }
+            };
         }
 
         private static ActionGroupResource GetCreateOrUpdateActionGroupParameter(
