@@ -243,7 +243,7 @@ namespace Monitor.Tests.BasicTests
             AzureOperationResponse response = monitorManagementClient.ActionGroups.EnableReceiverWithHttpMessagesAsync(
                 resourceGroupName: "rg1",
                 actionGroupName: "name1",
-                receiverName: "receiverName1").Result;
+                enableRequest: new EnableRequest("receiverName1")).Result;
 
             Assert.Equal(HttpStatusCode.OK, response.Response.StatusCode);
         }
@@ -274,6 +274,7 @@ namespace Monitor.Tests.BasicTests
                 AreEqual(exp.ItsmReceivers, act.ItsmReceivers);
                 AreEqual(exp.AzureAppPushReceivers, act.AzureAppPushReceivers);
                 AreEqual(exp.AutomationRunbookReceivers, act.AutomationRunbookReceivers);
+                AreEqual(exp.EventHubReceivers, exp.EventHubReceivers);
             }
         }
 
@@ -354,6 +355,17 @@ namespace Monitor.Tests.BasicTests
             }
         }
 
+        private static void AreEqual(IList<EventHubReceiver> exp, IList<EventHubReceiver> act)
+        {
+            if (exp != null)
+            {
+                for (int i = 0; i < exp.Count; i++)
+                {
+                    AreEqual(exp[i], act[i]);
+                }
+            }
+        }
+
         private static void AreEqual(EmailReceiver exp, EmailReceiver act)
         {
             if (exp != null)
@@ -413,6 +425,18 @@ namespace Monitor.Tests.BasicTests
                 Assert.Equal(exp.Name, act.Name);
                 Assert.Equal(exp.RunbookName, act.RunbookName);
                 Assert.Equal(exp.ServiceUri, act.ServiceUri);
+            }
+        }
+
+        private static void AreEqual(EventHubReceiver exp, EventHubReceiver act)
+        {
+            if (exp != null)
+            {
+                Assert.Equal(exp.SubscriptionId, act.SubscriptionId);
+                Assert.Equal(exp.EventHubNameSpace, act.EventHubNameSpace);
+                Assert.Equal(exp.Name, act.Name);
+                Assert.Equal(exp.EventHubName, act.EventHubName);
+                Assert.Equal(exp.UseCommonAlertSchema, act.UseCommonAlertSchema);
             }
         }
 
@@ -497,7 +521,8 @@ namespace Monitor.Tests.BasicTests
             List<WebhookReceiver> webhookReceivers = null,
             List<AzureAppPushReceiver> azureAppPushReceivers = null,
             List<ItsmReceiver> itsmReceivers = null,
-            List<AutomationRunbookReceiver> automationRunbookReceivers = null)
+            List<AutomationRunbookReceiver> automationRunbookReceivers = null,
+            List<EventHubReceiver> eventHubReceivers = null)
         {
             // Name and id won't be serialized since they are readonly
             return new ActionGroupResource(
@@ -515,7 +540,8 @@ namespace Monitor.Tests.BasicTests
                 webhookReceivers: webhookReceivers,
                 azureAppPushReceivers: azureAppPushReceivers,
                 itsmReceivers: itsmReceivers,
-                automationRunbookReceivers: automationRunbookReceivers
+                automationRunbookReceivers: automationRunbookReceivers,
+                eventHubReceivers: eventHubReceivers
             );
         }
     }
